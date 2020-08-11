@@ -35,13 +35,15 @@
 		ѕервичное_выражение
 		“ерм * ѕервичное_выражение
 		“ерм / ѕервичное_выражение
-		X “ерм % ѕервичное_выражение
+		“ерм % ѕервичное_выражение
 		
 	ѕервичное_выражение:
 		„исло
 		( ¬ыражение )
 		- ѕервичное_выражение
 		+ ѕервичное_выражение
+		sqrt ( ¬ыражение )
+		pow ( ¬ыражение , ¬ыражение )
 
 	„исло:
 		Ћитерал_с_плавающей_точкой
@@ -80,6 +82,9 @@ const char quit = 'Q';
 const char print = ';';
 const char number = '8';
 const char name = 'a';
+const char sqroot = 'r';
+const char power = 'p';
+const char sep = ',';
 
 Token Token_stream::get() // получение следующего токена из потока токенов
 {
@@ -99,6 +104,7 @@ Token Token_stream::get() // получение следующего токена из потока токенов
 	case '%':
 	case ';':
 	case '=':
+	case ',':
 		return Token{ ch };
 	case '.': // дл€ чисел
 	case '0':
@@ -124,6 +130,8 @@ Token Token_stream::get() // получение следующего токена из потока токенов
 			cin.unget();
 			if (s == "let") return Token{ let }; // обработка служебных слов
 			if (s == "quit") return Token{ quit };
+			if (s == "sqrt") return Token{ sqroot };
+			if (s == "pow") return Token{ power };
 			return Token{ name, s }; // если не служебное слово, то переменна€
 		}
 		error("Bad token");
@@ -155,7 +163,7 @@ double get_value(string s) // получение значени€ переменной по имени
 {
 	for (int i = 0; i < names.size(); ++i)
 		if (names[i].name == s) return names[i].value;
-	error("get: undefined name ", s);
+	error("get_value: undefined name ", s);
 }
 
 void set_value(string s, double d) // установление значени€ существующей переменной
@@ -179,7 +187,19 @@ Token_stream ts; // поток токенов
 
 double expression();
 
-double primary() // чтение первичного выражени€ -- число, отрицательное первичное выражение, выражение в скобках, существующа€ переменна€
+double my_pow(double x, int i) // возведение x в степень i
+{
+	if (i < 0)
+		error("negative power");
+	double p = 1;
+	if (i == 0)
+		return p;
+	for (int k = 0; k < i; ++k)
+		p *= x;
+	return p;
+}
+
+double primary() // чтение первичного выражени€ -- число, отрицательное первичное выражение, выражение в скобках, существующа€ переменна€, sqrt ( ¬ыражение ), pow ( ¬ыражение , ¬ыражение )
 {
 	Token t = ts.get();
 	switch (t.kind) {
@@ -199,6 +219,35 @@ double primary() // чтение первичного выражени€ -- число, отрицательное первично
 		return t.value;
 	case name: // существующа€ переменна€
 		return get_value(t.name);
+	case sqroot: // sqrt( ¬ыражение )
+		t = ts.get();
+		if (t.kind == '(') {
+			double d = expression();
+			t = ts.get();
+			if (t.kind != ')')
+				error("'(' expected");
+			if (d >= 0)
+				return sqrt(d);
+			else
+				error("sqare root of a negative number");
+		}
+		else
+			error("'(' expected");
+	case power: // pow ( ¬ыражение , ¬ыражение )
+		t = ts.get();
+		if (t.kind == '(') {
+			double x = expression();
+			t = ts.get();
+			if (t.kind != sep)
+				error("',' expected");
+			int i = narrow_cast<int>(expression());
+			t = ts.get();
+			if (t.kind != ')')
+				error("')' expected");
+			return my_pow(x, i);
+		}
+		else
+			error("'(' expected");
 	default:
 		error("primary expected");
 	}
