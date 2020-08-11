@@ -91,6 +91,7 @@ public:
 const char let = '#';
 const char quit = 'q';
 const char print = ';';
+const char newline = '\n';
 const char number = '8';
 const char name = 'a';
 const char sqroot = 'r';
@@ -105,8 +106,14 @@ Token Token_stream::get() // получение следующего токена из потока токенов
 		return buffer;
 	} 
 	char ch;
-	cin >> ch;
+	cin.get(ch);
+	while (isspace(ch)) { // пропускаем все пробельные символы
+		if (ch == '\n') // конец строки - вывод на экран
+			return newline;
+		cin.get(ch);
+	}
 	switch (ch) {
+	case '\n':
 	case '(': // для операторов
 	case ')':
 	case '+':
@@ -161,8 +168,10 @@ void Token_stream::ignore(char c) // игнорировать ввод до появления символа (с),
 	full = false;
 
 	char ch;
-	while (cin >> ch)
+	while (cin.get(ch)) {
+		if (ch == newline) ch = print; // для ignore() print и newline - одно и то же
 		if (ch == c) return; // останавливаемся, когда найдём символ c
+	}
 }
 
 struct Variable { // так переменные калькулятора хранятся в памяти
@@ -244,7 +253,7 @@ double primary() // чтение первичного выражения -- число, отрицательное первично
 		double d = expression();
 		t = ts.get();
 		if (t.kind != ')')
-			error("'(' expected");
+			error("')' expected");
 		return d;
 	}
 	case '-': // отрицательное первичное выражение
@@ -255,6 +264,7 @@ double primary() // чтение первичного выражения -- число, отрицательное первично
 		return t.value;
 	case name: // существующая переменная
 	{
+		if (!table.is_declared(t.name)) error(t.name + " is not defined");
 		Token t2 = ts.get();
 		if (t2.kind == '=') {
 			double var_value = expression();
@@ -320,7 +330,6 @@ double term() // чтение терма -- первичное выражение, терм * число, терм / число
 			double d = primary();
 			if (d == 0) error("%: divided by zero");
 			left = fmod(left, d);
-			t = ts.get();
 			break;
 		}
 		default: // терм закончился
@@ -394,7 +403,9 @@ void calculate() // обработка вычислений -- инструкция, вывод, выход, вычисление
 	while (true) try {
 		cout << prompt;
 		Token t = ts.get();
-		while (t.kind == print) t = ts.get(); // пропускаем несколько символов вывода подряд
+		while (t.kind == print || t.kind == newline) { // пропускаем несколько символов вывода подряд
+			t = ts.get();
+		}
 		if (t.kind == quit) return; // выход из программы
 		ts.unget(t); // если не вывод на экран и не выход из программы, то возвращаем токен в поток ввода и обрабатываем инструкцию, выводя результат
 		cout << result << statement() << endl;
