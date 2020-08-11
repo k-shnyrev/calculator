@@ -32,6 +32,7 @@
 		Терм
 		Выражение + Терм
 		Выражение - Терм
+		Имя = Выражение
 
 	Терм:
 		Первичное_выражение
@@ -44,11 +45,15 @@
 		( Выражение )
 		- Первичное_выражение
 		+ Первичное_выражение
+		Имя
 		sqrt ( Выражение )
 		pow ( Выражение , Выражение )
 
 	Число:
 		Литерал_с_плавающей_точкой
+
+	Имя:
+		Литерал_из_букв_цифр_и_подчёркивания_начинающийся_с_буквы
 
 	Ввод из потока cin через Token_stream с именем ts.
 */
@@ -125,11 +130,11 @@ Token Token_stream::get() // получение следующего токена из потока токенов
 		cin >> val;
 		return Token{ number, val };
 	}
-	default: // для переменных или служебных слов 'let', 'quit'
+	default: // для переменных или служебных слов 'let', 'quit', должны начинаться с буквы
 		if (isalpha(ch)) {
 			string s;
 			s += ch;
-			while (cin.get(ch) && (isalpha(ch) || isdigit(ch))) s += ch; // читаем посимвольно слово (из букв и цифр)
+			while (cin.get(ch) && (isalpha(ch) || isdigit(ch) || ch == '_')) s += ch; // читаем посимвольно слово (из букв, цифр и '_')
 			cin.unget();
 			if (s == "let") return Token{ let }; // обработка служебных слов
 			if (s == "quit" || s == "exit") return Token{ quit };
@@ -169,12 +174,14 @@ double get_value(string s) // получение значения переменной по имени
 	error("get_value: undefined name ", s);
 }
 
-void set_value(string s, double d) // установление значения существующей переменной
+double set_value(string s, double d) // установление значения существующей переменной
 {
-	for (int i = 0; i <= names.size(); ++i)
+	/*cerr << "setting " << s << " = " << d << "\n";
+	cerr << "now there are " << names.size() << " names\n";*/
+	for (int i = 0; i < names.size(); ++i)
 		if (names[i].name == s) {
 			names[i].value = d;
-			return;
+			return names[i].value;
 		}
 	error("set: undefined name ", s);
 }
@@ -242,7 +249,7 @@ double primary() // чтение первичного выражения -- число, отрицательное первично
 			double x = expression();
 			t = ts.get();
 			if (t.kind != sep)
-				error("',' expected");
+				error(sep + " expected");
 			int i = narrow_cast<int>(expression());
 			t = ts.get();
 			if (t.kind != ')')
@@ -287,9 +294,25 @@ double term() // чтение терма -- первичное выражение, терм * число, терм / число
 	}
 }
 
-double expression() // чтение выражения -- терм + терм, выражение + терм, терм - терм, выражение - терм
+double expression() // чтение выражения -- терм, выражение + терм, выражение - терм, имя = выражение
 {
-	double left = term();
+	double left{ 0 };
+	Token t0 = ts.get();
+	if (t0.kind == name) {
+		Token t = ts.get();
+		if (t.kind == '=') {
+			double var_value = expression();
+			left = set_value(t0.name, var_value);
+		}
+		else {
+			ts.unget(t);
+			left = get_value(t0.name);
+		}
+	}
+	else {
+		ts.unget(t0);
+		left = term();
+	}
 	while (true) {
 		Token t = ts.get();
 		switch (t.kind) {
@@ -313,21 +336,25 @@ double define_name(string var, double val) { // добавление новой переменной в гл
 	return val;
 }
 
-double declaration() // объявление переменной - 'let имя = выражение'
+double declaration() // объявление переменной - 'let имя = выражение', '# имя = выражение'
 {
 	Token t = ts.get();
-	if (t.kind != name)
+	if (t.kind != name) {
+		ts.unget(t);
 		error("name expected in declaration");
+	}
 	string var_name = t.name;
 	Token t2 = ts.get();
-	if (t2.kind != '=')
+	if (t2.kind != '=') {
+		ts.unget(t2);
 		error("= missing in declaration of ", var_name);
+	}
 	double d = expression();
 	define_name(var_name, d);
 	return d;
 }
 
-double statement() // чтение инструкции -- объявление или выражение
+double statement() // чтение инструкции -- объявление, выражение
 {
 	Token t = ts.get();
 	switch (t.kind) {
