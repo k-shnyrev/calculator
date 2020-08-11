@@ -15,11 +15,15 @@
 
 	Инструкция:
 		Объявление
+		Объявление_константы
 		Выражение
 
 	Объявление:
 		let Имя = Выражение
 		# Имя = Выражение
+
+	Объявление константы:
+		const Имя = Выражение
 		
 	Вывод:
 		;
@@ -32,7 +36,6 @@
 		Терм
 		Выражение + Терм
 		Выражение - Терм
-		Имя = Выражение
 
 	Терм:
 		Первичное_выражение
@@ -48,6 +51,7 @@
 		Имя
 		sqrt ( Выражение )
 		pow ( Выражение , Выражение )
+		Имя = Выражение
 
 	Число:
 		Литерал_с_плавающей_точкой
@@ -92,6 +96,7 @@ const char name = 'a';
 const char sqroot = 'r';
 const char power = 'p';
 const char sep = ',';
+const char t_const = 'c';
 
 Token Token_stream::get() // получение следующего токена из потока токенов
 {
@@ -140,6 +145,7 @@ Token Token_stream::get() // получение следующего токена из потока токенов
 			if (s == "quit" || s == "exit") return Token{ quit };
 			if (s == "sqrt") return Token{ sqroot };
 			if (s == "pow") return Token{ power };
+			if (s == "const") return Token{ t_const };
 			return Token{ name, s }; // если не служебное слово, то переменная
 		}
 		error("Bad token");
@@ -162,7 +168,9 @@ void Token_stream::ignore(char c) // игнорировать ввод до появления символа (с),
 struct Variable { // так переменные калькулятора хранятся в памяти
 	string name;
 	double value;
-	Variable(string n, double v) :name(n), value(v) { }
+	bool is_const;
+	Variable(string n, double v) :name(n), value(v), is_const(false) { }
+	Variable(string n, double v, bool c) :name(n), value(v), is_const(c) { }
 };
 
 vector<Variable> names; // глобальная таблица переменных
@@ -176,12 +184,13 @@ double get_value(string s) // получение значения переменной по имени
 
 double set_value(string s, double d) // установление значения существующей переменной
 {
-	/*cerr << "setting " << s << " = " << d << "\n";
-	cerr << "now there are " << names.size() << " names\n";*/
 	for (int i = 0; i < names.size(); ++i)
 		if (names[i].name == s) {
-			names[i].value = d;
-			return names[i].value;
+			if (!names[i].is_const) {
+				names[i].value = d;
+				return names[i].value;
+			}
+			error("set: " + s + " is const");
 		}
 	error("set: undefined name ", s);
 }
@@ -209,12 +218,12 @@ double my_pow(double x, int i) // возведение x в степень i
 	return p;
 }
 
-double primary() // чтение первичного выражения -- число, отрицательное первичное выражение, выражение в скобках, существующая переменная, sqrt ( Выражение ), pow ( Выражение , Выражение )
+double primary() // чтение первичного выражения -- число, отрицательное первичное выражение, выражение в скобках, существующая переменная, sqrt ( Выражение ), pow ( Выражение , Выражение ), Имя = Выражение
 {
 	Token t = ts.get();
 	switch (t.kind) {
 	case '(': // выражение в скобках
-	{	
+	{
 		double d = expression();
 		t = ts.get();
 		if (t.kind != ')')
@@ -228,7 +237,17 @@ double primary() // чтение первичного выражения -- число, отрицательное первично
 	case number: // число
 		return t.value;
 	case name: // существующая переменная
-		return get_value(t.name);
+	{
+		Token t2 = ts.get();
+		if (t2.kind == '=') {
+			double var_value = expression();
+			return set_value(t.name, var_value);
+		}
+		else {
+			ts.unget(t2);
+			return get_value(t.name);
+		}
+	}
 	case sqroot: // sqrt( Выражение )
 		t = ts.get();
 		if (t.kind == '(') {
@@ -294,25 +313,9 @@ double term() // чтение терма -- первичное выражение, терм * число, терм / число
 	}
 }
 
-double expression() // чтение выражения -- терм, выражение + терм, выражение - терм, имя = выражение
+double expression() // чтение выражения -- терм, выражение + терм, выражение - терм
 {
-	double left{ 0 };
-	Token t0 = ts.get();
-	if (t0.kind == name) {
-		Token t = ts.get();
-		if (t.kind == '=') {
-			double var_value = expression();
-			left = set_value(t0.name, var_value);
-		}
-		else {
-			ts.unget(t);
-			left = get_value(t0.name);
-		}
-	}
-	else {
-		ts.unget(t0);
-		left = term();
-	}
+	double left = term();
 	while (true) {
 		Token t = ts.get();
 		switch (t.kind) {
@@ -329,14 +332,14 @@ double expression() // чтение выражения -- терм, выражение + терм, выражение - т
 	}
 }
 
-double define_name(string var, double val) { // добавление новой переменной в глобальную таблицу переменных
+double define_name(string var, double val, bool cnst) { // добавление новой переменной в глобальную таблицу переменных
 	if (is_declared(var))
 		error(var, " declared twice");
-	names.push_back(Variable(var, val));
+	names.push_back(Variable(var, val, cnst));
 	return val;
 }
 
-double declaration() // объявление переменной - 'let имя = выражение', '# имя = выражение'
+double declaration(bool cnst) // объявление переменной - 'let имя = выражение', '# имя = выражение' или константы - 'const имя = выражение'
 {
 	Token t = ts.get();
 	if (t.kind != name) {
@@ -350,7 +353,7 @@ double declaration() // объявление переменной - 'let имя = выражение', '# имя = 
 		error("= missing in declaration of ", var_name);
 	}
 	double d = expression();
-	define_name(var_name, d);
+	define_name(var_name, d, cnst);
 	return d;
 }
 
@@ -359,7 +362,9 @@ double statement() // чтение инструкции -- объявление, выражение
 	Token t = ts.get();
 	switch (t.kind) {
 	case let: // объявление
-		return declaration();
+		return declaration(false);
+	case t_const:
+		return declaration(true);
 	default: // выражение
 		ts.unget(t);
 		return expression();
@@ -393,8 +398,8 @@ void calculate() // обработка вычислений -- инструкция, вывод, выход, вычисление
 int main()
 
 try {
-	define_name("pi", M_PI);
-	define_name("e", M_E);
+	define_name("pi", M_PI, true);
+	define_name("e", M_E, true);
 
 	calculate();
 	return 0;
