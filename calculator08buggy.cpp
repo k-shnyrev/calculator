@@ -19,12 +19,14 @@
 
 	Объявление:
 		let Имя = Выражение
+		# Имя = Выражение
 		
 	Вывод:
 		;
 	
 	Выход:
 		quit
+		exit
 
 	Выражение:
 		Терм
@@ -77,8 +79,8 @@ public:
 };
 
 // описание констант, обозначающих типы токенов
-const char let = 'L';
-const char quit = 'Q';
+const char let = '#';
+const char quit = 'q';
 const char print = ';';
 const char number = '8';
 const char name = 'a';
@@ -105,6 +107,7 @@ Token Token_stream::get() // получение следующего токена из потока токенов
 	case ';':
 	case '=':
 	case ',':
+	case '#':
 		return Token{ ch };
 	case '.': // для чисел
 	case '0':
@@ -129,7 +132,7 @@ Token Token_stream::get() // получение следующего токена из потока токенов
 			while (cin.get(ch) && (isalpha(ch) || isdigit(ch))) s += ch; // читаем посимвольно слово (из букв и цифр)
 			cin.unget();
 			if (s == "let") return Token{ let }; // обработка служебных слов
-			if (s == "quit") return Token{ quit };
+			if (s == "quit" || s == "exit") return Token{ quit };
 			if (s == "sqrt") return Token{ sqroot };
 			if (s == "pow") return Token{ power };
 			return Token{ name, s }; // если не служебное слово, то переменная
