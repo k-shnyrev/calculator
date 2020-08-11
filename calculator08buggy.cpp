@@ -61,7 +61,7 @@
 
 	Ввод из потока cin через Token_stream с именем ts.
 */
-#define _USE_MATH_DEFINES
+// #define _USE_MATH_DEFINES
 
 #include "std_lib_facilities.h"
 #include <cmath>
@@ -82,10 +82,10 @@ void print_help()
 
 struct Token { // токен состоит из типа, значения и (возможно) имени переменной, может инициализироваться только типом (операторы) или типом и значением (числа)
 	char kind;
-	double value;
+	int value;
 	string name;
 	Token(char ch) :kind(ch), value(0) { }
-	Token(char ch, double val) :kind(ch), value(val) { }
+	Token(char ch, int val) :kind(ch), value(val) { }
 	Token(char ch, string n) :kind(ch), value(0), name(n) { }
 };
 
@@ -141,7 +141,7 @@ Token Token_stream::get() // получение следующего токена из потока токенов
 	case ',':
 	case '#':
 		return Token{ ch };
-	case '.': // для чисел
+	// для чисел
 	case '0':
 	case '1':
 	case '2':
@@ -153,7 +153,7 @@ Token Token_stream::get() // получение следующего токена из потока токенов
 	case '8':
 	case '9': {
 		cin.unget();
-		double val;
+		int val;
 		cin >> val;
 		return Token{ number, val };
 	}
@@ -192,29 +192,29 @@ void Token_stream::ignore(char c) // игнорировать ввод до появления символа (с),
 
 struct Variable { // так переменные калькулятора хранятся в памяти
 	string name;
-	double value;
+	int value;
 	bool is_const;
-	Variable(string n, double v) :name(n), value(v), is_const(false) { }
-	Variable(string n, double v, bool c) :name(n), value(v), is_const(c) { }
+	Variable(string n, int v) :name(n), value(v), is_const(false) { }
+	Variable(string n, int v, bool c) :name(n), value(v), is_const(c) { }
 };
 
 class Symbol_table { // таблица переменных и констант
 	vector<Variable> var_table;
 public:
-	double get(string s); // получение значения переменной по имени
-	double set(string s, double d); // установление значения существующей переменной
+	int get(string s); // получение значения переменной по имени
+	int set(string s, int d); // установление значения существующей переменной
 	bool is_declared(string s); // проверка существования переменной
-	double define(string var, double val, bool cnst); // добавление новой переменной в глобальную таблицу переменных
+	int define(string var, int val, bool cnst); // добавление новой переменной в глобальную таблицу переменных
 };
 
-double Symbol_table::get(string s) // получение значения переменной по имени
+int Symbol_table::get(string s) // получение значения переменной по имени
 {
 	for (int i = 0; i < var_table.size(); ++i)
 		if (var_table[i].name == s) return var_table[i].value;
 	error("get_value: undefined name ", s);
 }
 
-double Symbol_table::set(string s, double d) // установление значения существующей переменной
+int Symbol_table::set(string s, int d) // установление значения существующей переменной
 {
 	for (int i = 0; i < var_table.size(); ++i)
 		if (var_table[i].name == s) {
@@ -234,7 +234,7 @@ bool Symbol_table::is_declared(string s) // проверка существования переменной
 	return false;
 }
 
-double Symbol_table::define(string var, double val, bool cnst) // добавление новой переменной в глобальную таблицу переменных
+int Symbol_table::define(string var, int val, bool cnst) // добавление новой переменной в глобальную таблицу переменных
 {	
 	if (is_declared(var))
 		error(var, " declared twice");
@@ -246,27 +246,27 @@ Token_stream ts; // поток токенов
 
 Symbol_table table; // таблица переменных
 
-double expression();
+int expression();
 
-double my_pow(double x, int i) // возведение x в степень i
+int my_pow(int x, int i) // возведение x в степень i
 {
 	if (i < 0)
 		error("negative power");
-	double p = 1;
+	int p = 1;
 	if (i == 0)
 		return p;
 	for (int k = 0; k < i; ++k)
-		p *= x;
+		p = narrow_cast<int>(p * x);
 	return p;
 }
 
-double primary() // чтение первичного выражения -- число, отрицательное первичное выражение, выражение в скобках, существующая переменная, sqrt ( Выражение ), pow ( Выражение , Выражение ), Имя = Выражение
+int primary() // чтение первичного выражения -- число, отрицательное первичное выражение, выражение в скобках, существующая переменная, sqrt ( Выражение ), pow ( Выражение , Выражение ), Имя = Выражение
 {
 	Token t = ts.get();
 	switch (t.kind) {
 	case '(': // выражение в скобках
 	{
-		double d = expression();
+		int d = expression();
 		t = ts.get();
 		if (t.kind != ')')
 			error("')' expected");
@@ -283,7 +283,7 @@ double primary() // чтение первичного выражения -- число, отрицательное первично
 		if (!table.is_declared(t.name)) error(t.name + " is not defined");
 		Token t2 = ts.get();
 		if (t2.kind == '=') {
-			double var_value = expression();
+			int var_value = expression();
 			return table.set(t.name, var_value);
 		}
 		else {
@@ -294,12 +294,12 @@ double primary() // чтение первичного выражения -- число, отрицательное первично
 	case sqroot: // sqrt( Выражение )
 		t = ts.get();
 		if (t.kind == '(') {
-			double d = expression();
+			int d = expression();
 			t = ts.get();
 			if (t.kind != ')')
 				error("'(' expected");
 			if (d >= 0)
-				return sqrt(d);
+				return int(sqrt(d));
 			else
 				error("sqare root of a negative number");
 		}
@@ -308,11 +308,11 @@ double primary() // чтение первичного выражения -- число, отрицательное первично
 	case power: // pow ( Выражение , Выражение )
 		t = ts.get();
 		if (t.kind == '(') {
-			double x = expression();
+			int x = expression();
 			t = ts.get();
 			if (t.kind != sep)
 				error(sep + " expected");
-			int i = narrow_cast<int>(expression());
+			int i = expression();
 			t = ts.get();
 			if (t.kind != ')')
 				error("')' expected");
@@ -325,27 +325,27 @@ double primary() // чтение первичного выражения -- число, отрицательное первично
 	}
 }
 
-double term() // чтение терма -- первичное выражение, терм * число, терм / число
+int term() // чтение терма -- первичное выражение, терм * число, терм / число
 {
-	double left = primary();
+	int left = primary();
 	while (true) {
 		Token t = ts.get();
 		switch (t.kind) {
 		case '*':
-			left *= primary();
+			left = narrow_cast<int>(left * primary());
 			break;
 		case '/':
 		{
-			double d = primary();
+			int d = primary();
 			if (d == 0) error("/: divide by zero");
 			left /= d;
 			break;
 		}
 		case '%':
 		{
-			double d = primary();
+			int d = primary();
 			if (d == 0) error("%: divided by zero");
-			left = fmod(left, d);
+			left %= d;
 			break;
 		}
 		default: // терм закончился
@@ -355,17 +355,17 @@ double term() // чтение терма -- первичное выражение, терм * число, терм / число
 	}
 }
 
-double expression() // чтение выражения -- терм, выражение + терм, выражение - терм
+int expression() // чтение выражения -- терм, выражение + терм, выражение - терм
 {
-	double left = term();
+	int left = term();
 	while (true) {
 		Token t = ts.get();
 		switch (t.kind) {
 		case '+':
-			left += term();
+			left = narrow_cast<int>(left + term());
 			break;
 		case '-':
-			left -= term();
+			left = narrow_cast<int>(left - term());
 			break;
 		default: // выражение закончилось
 			ts.unget(t);
@@ -374,7 +374,7 @@ double expression() // чтение выражения -- терм, выражение + терм, выражение - т
 	}
 }
 
-double declaration(bool cnst) // объявление переменной - 'let имя = выражение', '# имя = выражение' или константы - 'const имя = выражение'
+int declaration(bool cnst) // объявление переменной - 'let имя = выражение', '# имя = выражение' или константы - 'const имя = выражение'
 {
 	Token t = ts.get();
 	if (t.kind != name) {
@@ -387,12 +387,12 @@ double declaration(bool cnst) // объявление переменной - 'let имя = выражение', 
 		ts.unget(t2);
 		error("= missing in declaration of ", var_name);
 	}
-	double d = expression();
+	int d = expression();
 	table.define(var_name, d, cnst);
 	return d;
 }
 
-double statement() // чтение инструкции -- объявление, выражение
+int statement() // чтение инструкции -- объявление, выражение
 {
 	Token t = ts.get();
 	switch (t.kind) {
@@ -437,8 +437,8 @@ void calculate() // обработка вычислений -- инструкция, вывод, выход, вычисление
 
 int main()
 try {
-	table.define("pi", M_PI, true);
-	table.define("e", M_E, true);
+	// table.define("pi", M_PI, true);
+	// table.define("e", M_E, true);
 
 	calculate();
 	return 0;
