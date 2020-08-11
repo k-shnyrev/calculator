@@ -66,6 +66,20 @@
 #include "std_lib_facilities.h"
 #include <cmath>
 
+void print_help()
+{
+	cout << "Use 'help' for help,\n"
+		<< "'quit' for quit,\n"
+		<< "';' for the end of the command to see the result."
+		<< "Use 'let' or '#' to make a variable, names can start with letter and consist of letters, digits and '-':\n"
+		<< "example: 'let a = 3; # b_5 = a * 3;'.\n"
+		<< "Use 'const' to make a constant, for example 'const p = 2'.\n"
+		<< "You can use usual operations '+', '-', '*', '/', '%' as mod;\n"
+		<< "sqrt(x) for square root;\n"
+		<< "pow(x, n) to calculate x to the power of n (natural or zero).\n"
+		<< "Use 'a = 4' to change the value of already set (!) variable.\n";
+}
+
 struct Token { // токен состоит из типа, значения и (возможно) имени переменной, может инициализироваться только типом (операторы) или типом и значением (числа)
 	char kind;
 	double value;
@@ -90,6 +104,7 @@ public:
 // описание констант, обозначающих типы токенов
 const char let = '#';
 const char quit = 'q';
+const char help = 'h';
 const char print = ';';
 const char newline = '\n';
 const char number = '8';
@@ -149,7 +164,8 @@ Token Token_stream::get() // получение следующего токена из потока токенов
 			while (cin.get(ch) && (isalpha(ch) || isdigit(ch) || ch == '_')) s += ch; // читаем посимвольно слово (из букв, цифр и '_')
 			cin.unget();
 			if (s == "let") return Token{ let }; // обработка служебных слов
-			if (s == "quit" || s == "exit") return Token{ quit };
+			if (s == "quit" || s == "exit" || s == "q") return Token{ quit };
+			if (s == "help" || s == "h" || s == "H") return Token{ help };
 			if (s == "sqrt") return Token{ sqroot };
 			if (s == "pow") return Token{ power };
 			if (s == "const") return Token{ t_const };
@@ -407,8 +423,11 @@ void calculate() // обработка вычислений -- инструкция, вывод, выход, вычисление
 			t = ts.get();
 		}
 		if (t.kind == quit) return; // выход из программы
-		ts.unget(t); // если не вывод на экран и не выход из программы, то возвращаем токен в поток ввода и обрабатываем инструкцию, выводя результат
-		cout << result << statement() << endl;
+		if (t.kind == help) print_help();
+		else {
+			ts.unget(t); // если не вывод на экран, не выход из программы и не вывод справки, то возвращаем токен в поток ввода и обрабатываем инструкцию, выводя результат
+			cout << result << statement() << endl;
+		}
 	}
 	catch (runtime_error& e) { // в случае ошибки выводим сообщение и очищаем мусор в потоке токенов, но не завершаем программу
 		cerr << e.what() << endl;
@@ -417,7 +436,6 @@ void calculate() // обработка вычислений -- инструкция, вывод, выход, вычисление
 }
 
 int main()
-
 try {
 	table.define("pi", M_PI, true);
 	table.define("e", M_E, true);
