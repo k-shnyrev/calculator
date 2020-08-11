@@ -173,36 +173,53 @@ struct Variable { // так переменные калькулятора хранятся в памяти
 	Variable(string n, double v, bool c) :name(n), value(v), is_const(c) { }
 };
 
-vector<Variable> names; // глобальная таблица переменных
+class Symbol_table { // таблица переменных и констант
+	vector<Variable> var_table;
+public:
+	double get(string s); // получение значения переменной по имени
+	double set(string s, double d); // установление значения существующей переменной
+	bool is_declared(string s); // проверка существования переменной
+	double define(string var, double val, bool cnst); // добавление новой переменной в глобальную таблицу переменных
+};
 
-double get_value(string s) // получение значения переменной по имени
+double Symbol_table::get(string s) // получение значения переменной по имени
 {
-	for (int i = 0; i < names.size(); ++i)
-		if (names[i].name == s) return names[i].value;
+	for (int i = 0; i < var_table.size(); ++i)
+		if (var_table[i].name == s) return var_table[i].value;
 	error("get_value: undefined name ", s);
 }
 
-double set_value(string s, double d) // установление значения существующей переменной
+double Symbol_table::set(string s, double d) // установление значения существующей переменной
 {
-	for (int i = 0; i < names.size(); ++i)
-		if (names[i].name == s) {
-			if (!names[i].is_const) {
-				names[i].value = d;
-				return names[i].value;
+	for (int i = 0; i < var_table.size(); ++i)
+		if (var_table[i].name == s) {
+			if (!var_table[i].is_const) {
+				var_table[i].value = d;
+				return var_table[i].value;
 			}
 			error("set: " + s + " is const");
 		}
 	error("set: undefined name ", s);
 }
 
-bool is_declared(string s) // проверка существования переменной
+bool Symbol_table::is_declared(string s) // проверка существования переменной
 {
-	for (int i = 0; i < names.size(); ++i)
-		if (names[i].name == s) return true;
+	for (int i = 0; i < var_table.size(); ++i)
+		if (var_table[i].name == s) return true;
 	return false;
 }
 
+double Symbol_table::define(string var, double val, bool cnst) // добавление новой переменной в глобальную таблицу переменных
+{	
+	if (is_declared(var))
+		error(var, " declared twice");
+	var_table.push_back(Variable(var, val, cnst));
+	return val;
+}
+
 Token_stream ts; // поток токенов
+
+Symbol_table table; // таблица переменных
 
 double expression();
 
@@ -241,11 +258,11 @@ double primary() // чтение первичного выражения -- число, отрицательное первично
 		Token t2 = ts.get();
 		if (t2.kind == '=') {
 			double var_value = expression();
-			return set_value(t.name, var_value);
+			return table.set(t.name, var_value);
 		}
 		else {
 			ts.unget(t2);
-			return get_value(t.name);
+			return table.get(t.name);
 		}
 	}
 	case sqroot: // sqrt( Выражение )
@@ -332,13 +349,6 @@ double expression() // чтение выражения -- терм, выражение + терм, выражение - т
 	}
 }
 
-double define_name(string var, double val, bool cnst) { // добавление новой переменной в глобальную таблицу переменных
-	if (is_declared(var))
-		error(var, " declared twice");
-	names.push_back(Variable(var, val, cnst));
-	return val;
-}
-
 double declaration(bool cnst) // объявление переменной - 'let имя = выражение', '# имя = выражение' или константы - 'const имя = выражение'
 {
 	Token t = ts.get();
@@ -353,7 +363,7 @@ double declaration(bool cnst) // объявление переменной - 'let имя = выражение', 
 		error("= missing in declaration of ", var_name);
 	}
 	double d = expression();
-	define_name(var_name, d, cnst);
+	table.define(var_name, d, cnst);
 	return d;
 }
 
@@ -398,8 +408,8 @@ void calculate() // обработка вычислений -- инструкция, вывод, выход, вычисление
 int main()
 
 try {
-	define_name("pi", M_PI, true);
-	define_name("e", M_E, true);
+	table.define("pi", M_PI, true);
+	table.define("e", M_E, true);
 
 	calculate();
 	return 0;
