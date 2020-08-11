@@ -7,11 +7,19 @@
 
 	Грамматика для ввода:
 
-	Инструкция:
-		Выражение
+	Вычисление:
+		Инструкция
 		Вывод
 		Выход
+		Вычисление Инструкция
 
+	Инструкция:
+		Объявление
+		Выражение
+
+	Объявление:
+		let Имя = Выражение
+		
 	Вывод:
 		;
 	
@@ -33,7 +41,7 @@
 		Число
 		( Выражение )
 		- Первичное_выражение
-		X + Первичное_выражение
+		+ Первичное_выражение
 
 	Число:
 		Литерал_с_плавающей_точкой
@@ -42,8 +50,8 @@
 */
 #define _USE_MATH_DEFINES
 
-#include "../../std_lib_facilities.h"
-#include <math.h>
+#include "std_lib_facilities.h"
+#include <cmath>
 
 struct Token { // токен состоит из типа, значения и (возможно) имени переменной, может инициализироваться только типом (операторы) или типом и значением (числа)
 	char kind;
@@ -75,7 +83,10 @@ const char name = 'a';
 
 Token Token_stream::get() // получение следующего токена из потока токенов
 {
-	if (full) { full = false; return buffer; } // если в буфере есть токен, забираем его оттуда
+	if (full) { // если в буфере есть токен, забираем его оттуда
+		full = false;
+		return buffer;
+	} 
 	char ch;
 	cin >> ch;
 	switch (ch) {
@@ -88,7 +99,7 @@ Token Token_stream::get() // получение следующего токена из потока токенов
 	case '%':
 	case ';':
 	case '=':
-		return Token(ch);
+		return Token{ ch };
 	case '.': // для чисел
 	case '0':
 	case '1':
@@ -103,7 +114,7 @@ Token Token_stream::get() // получение следующего токена из потока токенов
 		cin.unget();
 		double val;
 		cin >> val;
-		return Token(number, val);
+		return Token{ number, val };
 	}
 	default: // для переменных или служебных слов 'let', 'quit'
 		if (isalpha(ch)) {
@@ -111,9 +122,9 @@ Token Token_stream::get() // получение следующего токена из потока токенов
 			s += ch;
 			while (cin.get(ch) && (isalpha(ch) || isdigit(ch))) s += ch; // читаем посимвольно слово (из букв и цифр)
 			cin.unget();
-			if (s == "let") return Token(let); // обработка служебных слов
-			if (s == "quit") return Token(quit);
-			return Token(name, s); // если не служебное слово, то переменная
+			if (s == "let") return Token{ let }; // обработка служебных слов
+			if (s == "quit") return Token{ quit };
+			return Token{ name, s }; // если не служебное слово, то переменная
 		}
 		error("Bad token");
 	}
@@ -173,12 +184,17 @@ double primary() // чтение первичного выражения -- число, отрицательное первично
 	Token t = ts.get();
 	switch (t.kind) {
 	case '(': // выражение в скобках
-	{	double d = expression();
-	t = ts.get();
-	if (t.kind != ')') error("'(' expected");
+	{	
+		double d = expression();
+		t = ts.get();
+		if (t.kind != ')')
+			error("'(' expected");
+		return d;
 	}
 	case '-': // отрицательное первичное выражение
 		return -primary();
+	case '+':
+		return primary();
 	case number: // число
 		return t.value;
 	case name: // существующая переменная
@@ -200,8 +216,16 @@ double term() // чтение терма -- первичное выражение, терм * число, терм / число
 		case '/':
 		{
 			double d = primary();
-			if (d == 0) error("divide by zero");
+			if (d == 0) error("/: divide by zero");
 			left /= d;
+			break;
+		}
+		case '%':
+		{
+			double d = primary();
+			if (d == 0) error("%: divided by zero");
+			left = fmod(left, d);
+			t = ts.get();
 			break;
 		}
 		default: // терм закончился
