@@ -77,20 +77,20 @@
 
 void print_help()
 {
-	cout << "--------------------------------------------------------------------------------------------------------" << endl
-		<< "Use 'help' for help," << endl
-		<< "'quit' for quit," << endl
-		<< "';' for the end of the command to see the result." << endl
-		<< endl
-		<< "Use 'let' or '#' to make a variable, names can start with letter and consist of letters, digits and '-':" << endl
-		<< "example: 'let a = 3; # b_5 = a * 3;'." << endl
-		<< "Use 'const' to make a constant, for example 'const p = 2'." << endl
-		<< "Use 'a = 4' to change the value of already set (!) variable." << endl
-		<< endl
-		<< "You can use usual operations '+', '-', '*', '/', '%' as mod;" << endl
-		<< "sqrt(x) for square root;" << endl
-		<< "pow(x, n) to calculate x to the power of n (natural or zero)." << endl
-		<< "--------------------------------------------------------------------------------------------------------" << endl;
+	cout << "--------------------------------------------------------------------------------------------------------\n"
+		<< "Use 'help' for help,\n"
+		<< "'quit' for quit,\n"
+		<< "';' for the end of the command to see the result.\n"
+		<< "\n"
+		<< "Use 'let' or '#' to make a variable, names can start with letter and consist of letters, digits and '-':\n"
+		<< "example: 'let a = 3; # b_5 = a * 3;'.\n"
+		<< "Use 'const' to make a constant, for example 'const p = 2'.\n"
+		<< "Use 'a = 4' to change the value of already set (!) variable.\n"
+		<< "\n"
+		<< "You can use usual operations '+', '-', '*', '/', '%' as mod;\n"
+		<< "sqrt(x) for square root;\n"
+		<< "pow(x, n) to calculate x to the power of n (natural or zero).\n"
+		<< "--------------------------------------------------------------------------------------------------------\n";
 }
 
 struct Token {
@@ -438,11 +438,11 @@ void calculate(Token_stream& ts)
 		if (t.kind == help) print_help();
 		else {
 			ts.unget(t);
-			cout << result << statement(ts) << endl;
+			cout << result << statement(ts) << '\n';
 		}
 	}
 	catch (runtime_error& e) {
-		cerr << e.what() << endl;
+		cerr << e.what() << '\n';
 		clean_up_mess(ts);
 	}
 }
@@ -456,7 +456,7 @@ try {
 	return 0;
 }
 catch (exception& e) {
-	cerr << "exception: " << e.what() << endl;
+	cerr << "exception: " << e.what() << '\n';
 	/*char c;
 	while (cin >> c && c != ';');*/
 	return 1;
