@@ -4,7 +4,7 @@
 
 	This program implements a basic expression calculator.
 
-	Input from cin; output to cout.
+	Input from cin *to add: input from any stream*; output to cout.
 
 	The grammar for input is:
 
@@ -77,16 +77,20 @@
 
 void print_help()
 {
-	cout << "Use 'help' for help,\n"
-		<< "'quit' for quit,\n"
-		<< "';' for the end of the command to see the result."
-		<< "Use 'let' or '#' to make a variable, names can start with letter and consist of letters, digits and '-':\n"
-		<< "example: 'let a = 3; # b_5 = a * 3;'.\n"
-		<< "Use 'const' to make a constant, for example 'const p = 2'.\n"
-		<< "You can use usual operations '+', '-', '*', '/', '%' as mod;\n"
-		<< "sqrt(x) for square root;\n"
-		<< "pow(x, n) to calculate x to the power of n (natural or zero).\n"
-		<< "Use 'a = 4' to change the value of already set (!) variable.\n";
+	cout << "--------------------------------------------------------------------------------------------------------" << endl
+		<< "Use 'help' for help," << endl
+		<< "'quit' for quit," << endl
+		<< "';' for the end of the command to see the result." << endl
+		<< endl
+		<< "Use 'let' or '#' to make a variable, names can start with letter and consist of letters, digits and '-':" << endl
+		<< "example: 'let a = 3; # b_5 = a * 3;'." << endl
+		<< "Use 'const' to make a constant, for example 'const p = 2'." << endl
+		<< "Use 'a = 4' to change the value of already set (!) variable." << endl
+		<< endl
+		<< "You can use usual operations '+', '-', '*', '/', '%' as mod;" << endl
+		<< "sqrt(x) for square root;" << endl
+		<< "pow(x, n) to calculate x to the power of n (natural or zero)." << endl
+		<< "--------------------------------------------------------------------------------------------------------" << endl;
 }
 
 struct Token {
@@ -101,9 +105,10 @@ struct Token {
 class Token_stream {
 	bool full;
 	Token buffer;
+	istream& st;
 public:
-	Token_stream() :full(0), buffer(0) { }
-
+	Token_stream() :full(0), buffer(0), st{ cin } { }
+	Token_stream(istream& s) :full(0), buffer(0), st{ s } { }
 	Token get();
 	void unget(Token t) { buffer = t; full = true; }
 
@@ -130,11 +135,11 @@ Token Token_stream::get()
 		return buffer;
 	} 
 	char ch;
-	cin.get(ch);
+	st.get(ch);
 	while (isspace(ch)) {
 		if (ch == '\n')
 			return newline;
-		cin.get(ch);
+		st.get(ch);
 	}
 	switch (ch) {
 	case '\n':
@@ -161,17 +166,17 @@ Token Token_stream::get()
 	case '7':
 	case '8':
 	case '9': {
-		cin.unget();
+		st.unget();
 		double val;
-		cin >> val;
+		st >> val;
 		return Token{ number, val };
 	}
 	default:
 		if (isalpha(ch)) {
 			string s;
 			s += ch;
-			while (cin.get(ch) && (isalpha(ch) || isdigit(ch) || ch == '_')) s += ch; // letter-by-letter reading a word consisting of letters, digits and '_'
-			cin.unget();
+			while (st.get(ch) && (isalpha(ch) || isdigit(ch) || ch == '_')) s += ch; // letter-by-letter reading a word consisting of letters, digits and '_'
+			st.unget();
 			if (s == "let") return Token{ let };
 			if (s == "quit" || s == "exit" || s == "q") return Token{ quit };
 			if (s == "help" || s == "h" || s == "H") return Token{ help };
@@ -193,7 +198,7 @@ void Token_stream::ignore(char c)
 	full = false;
 
 	char ch;
-	while (cin.get(ch)) {
+	while (st.get(ch)) {
 		if (ch == newline) ch = print; // print and newline are the same for ignore()
 		if (ch == c) return;
 	}
@@ -251,11 +256,9 @@ double Symbol_table::define(string var, double val, bool cnst)
 	return val;
 }
 
-Token_stream ts;
-
 Symbol_table table;
 
-double expression();
+double expression(Token_stream& ts);
 
 double my_pow(double x, int i)
 {
@@ -269,22 +272,22 @@ double my_pow(double x, int i)
 	return p;
 }
 
-double primary()
+double primary(Token_stream &ts)
 {
 	Token t = ts.get();
 	switch (t.kind) {
 	case '(':
 	{
-		double d = expression();
+		double d = expression(ts);
 		t = ts.get();
 		if (t.kind != ')')
 			error("')' expected");
 		return d;
 	}
 	case '-':
-		return -primary();
+		return -primary(ts);
 	case '+':
-		return primary();
+		return primary(ts);
 	case number:
 		return t.value;
 	case name:
@@ -292,7 +295,7 @@ double primary()
 		if (!table.is_declared(t.name)) error(t.name + " is not defined");
 		Token t2 = ts.get();
 		if (t2.kind == '=') {
-			double var_value = expression();
+			double var_value = expression(ts);
 			return table.set(t.name, var_value);
 		}
 		else {
@@ -303,7 +306,7 @@ double primary()
 	case sqroot:
 		t = ts.get();
 		if (t.kind == '(') {
-			double d = expression();
+			double d = expression(ts);
 			t = ts.get();
 			if (t.kind != ')')
 				error("'(' expected");
@@ -317,11 +320,11 @@ double primary()
 	case power:
 		t = ts.get();
 		if (t.kind == '(') {
-			double x = expression();
+			double x = expression(ts);
 			t = ts.get();
 			if (t.kind != sep)
 				error(sep + " expected");
-			int i = narrow_cast<int>(expression());
+			int i = narrow_cast<int>(expression(ts));
 			t = ts.get();
 			if (t.kind != ')')
 				error("')' expected");
@@ -334,25 +337,25 @@ double primary()
 	}
 }
 
-double term()
+double term(Token_stream& ts)
 {
-	double left = primary();
+	double left = primary(ts);
 	while (true) {
 		Token t = ts.get();
 		switch (t.kind) {
 		case '*':
-			left *= primary();
+			left *= primary(ts);
 			break;
 		case '/':
 		{
-			double d = primary();
+			double d = primary(ts);
 			if (d == 0) error("/: divide by zero");
 			left /= d;
 			break;
 		}
 		case '%':
 		{
-			double d = primary();
+			double d = primary(ts);
 			if (d == 0) error("%: divided by zero");
 			left = fmod(left, d);
 			break;
@@ -364,17 +367,17 @@ double term()
 	}
 }
 
-double expression()
+double expression(Token_stream& ts)
 {
-	double left = term();
+	double left = term(ts);
 	while (true) {
 		Token t = ts.get();
 		switch (t.kind) {
 		case '+':
-			left += term();
+			left += term(ts);
 			break;
 		case '-':
-			left -= term();
+			left -= term(ts);
 			break;
 		default:
 			ts.unget(t);
@@ -383,7 +386,7 @@ double expression()
 	}
 }
 
-double declaration(bool cnst)
+double declaration(Token_stream& ts, bool cnst)
 {
 	Token t = ts.get();
 	if (t.kind != name) {
@@ -396,26 +399,26 @@ double declaration(bool cnst)
 		ts.unget(t2);
 		error("= missing in declaration of ", var_name);
 	}
-	double d = expression();
+	double d = expression(ts);
 	table.define(var_name, d, cnst);
 	return d;
 }
 
-double statement()
+double statement(Token_stream& ts)
 {
 	Token t = ts.get();
 	switch (t.kind) {
 	case let:
-		return declaration(false);
+		return declaration(ts, false);
 	case t_const:
-		return declaration(true);
+		return declaration(ts, true);
 	default:
 		ts.unget(t);
-		return expression();
+		return expression(ts);
 	}
 }
 
-void clean_up_mess()
+void clean_up_mess(Token_stream& ts)
 {
 	ts.ignore(print);
 }
@@ -423,7 +426,7 @@ void clean_up_mess()
 const string prompt = "> ";
 const string result = "= ";
 
-void calculate()
+void calculate(Token_stream& ts)
 {
 	while (true) try {
 		cout << prompt;
@@ -435,12 +438,12 @@ void calculate()
 		if (t.kind == help) print_help();
 		else {
 			ts.unget(t);
-			cout << result << statement() << endl;
+			cout << result << statement(ts) << endl;
 		}
 	}
 	catch (runtime_error& e) {
 		cerr << e.what() << endl;
-		clean_up_mess();
+		clean_up_mess(ts);
 	}
 }
 
@@ -448,8 +451,8 @@ int main()
 try {
 	table.define("pi", M_PI, true);
 	table.define("e", M_E, true);
-
-	calculate();
+	Token_stream ts;
+	calculate(ts);
 	return 0;
 }
 catch (exception& e) {
