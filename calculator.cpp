@@ -1,65 +1,74 @@
 /*
-	Основано на калькуляторе из книги Бьярне Страуструпа "Программирование: принципы и практика с использованием C++", упражнения в конце главы 7.
+	Based on a calculator from "Programming: Principles and Practice Using C++" by B. Stroustrup, 2nd edotion.
+	Exercises from Chapters 7 and 8.
 
-	Эта программа реализует основные выражения калькулятора.
+	This program implements a basic expression calculator.
 
-	Ввод осуществляется из потока cin; вывод - в потом cout.
+	Input from cin; output to cout.
 
-	Грамматика для ввода:
+	The grammar for input is:
 
-	Вычисление:
-		Инструкция
-		Вывод
-		Выход
-		Вычисление Инструкция
+	Calculation:
+		Instruction
+		Print
+		Exit
+		Help
+		Calsulation Instruction
 
-	Инструкция:
-		Объявление
-		Объявление_константы
-		Выражение
+	Instruction:
+		Declaration
+		Const_Declaration
+		Expression
 
-	Объявление:
-		let Имя = Выражение
-		# Имя = Выражение
+	Declaration:
+		'let' Name '=' Expression
+		'#' Name '=' Expression
 
-	Объявление константы:
-		const Имя = Выражение
-		
-	Вывод:
-		;
-	
-	Выход:
-		quit
-		exit
+	Const_Declaration:
+		'const' Name = Expression
 
-	Выражение:
-		Терм
-		Выражение + Терм
-		Выражение - Терм
+	Print:
+		';'
+		'\n'
 
-	Терм:
-		Первичное_выражение
-		Терм * Первичное_выражение
-		Терм / Первичное_выражение
-		Терм % Первичное_выражение
-		
-	Первичное_выражение:
-		Число
-		( Выражение )
-		- Первичное_выражение
-		+ Первичное_выражение
-		Имя
-		sqrt ( Выражение )
-		pow ( Выражение , Выражение )
-		Имя = Выражение
+	Exit:
+		'quit'
+		'exit'
+		'q'
 
-	Число:
-		Литерал_с_плавающей_точкой
+	Help:
+		'h'
+		'H'
+		'help'
 
-	Имя:
-		Литерал_из_букв_цифр_и_подчёркивания_начинающийся_с_буквы
+	Expression:
+		Term
+		Expression + Term
+		Expression - Term
 
-	Ввод из потока cin через Token_stream с именем ts.
+	Term:
+		Primary
+		Term * Primary
+		Term / Primary
+		Term % Primary
+
+	Primary:
+		Number
+		( Expression )
+		- Primary
+		+ Primary
+		Name
+		sqrt ( Expression )
+		pow ( Expression , Expression )
+		Name = Expression
+
+	Number:
+		floating-point-literal
+
+	Name:
+		same-as-var-names
+
+	Input comes from cin through the Token_stream called ts.
 */
 #define _USE_MATH_DEFINES
 
@@ -80,7 +89,7 @@ void print_help()
 		<< "Use 'a = 4' to change the value of already set (!) variable.\n";
 }
 
-struct Token { // токен состоит из типа, значения и (возможно) имени переменной, может инициализироваться только типом (операторы) или типом и значением (числа)
+struct Token {
 	char kind;
 	double value;
 	string name;
@@ -89,19 +98,19 @@ struct Token { // токен состоит из типа, значения и (возможно) имени переменной,
 	Token(char ch, string n) :kind(ch), value(0), name(n) { }
 };
 
-class Token_stream { // поток с буфером для чтения токенов
+class Token_stream {
 	bool full;
 	Token buffer;
 public:
 	Token_stream() :full(0), buffer(0) { }
 
-	Token get(); // получение следующего токена из потока токенов
-	void unget(Token t) { buffer = t; full = true; } // возврат токена в поток токенов
+	Token get();
+	void unget(Token t) { buffer = t; full = true; }
 
-	void ignore(char c); // игнорировать ввод до появления символа, переданного как аргумент
+	void ignore(char c);
 };
 
-// описание констант, обозначающих типы токенов
+// Token kinds
 const char let = '#';
 const char quit = 'q';
 const char help = 'h';
@@ -114,22 +123,22 @@ const char power = 'p';
 const char sep = ',';
 const char t_const = 'c';
 
-Token Token_stream::get() // получение следующего токена из потока токенов
+Token Token_stream::get()
 {
-	if (full) { // если в буфере есть токен, забираем его оттуда
+	if (full) {
 		full = false;
 		return buffer;
 	} 
 	char ch;
 	cin.get(ch);
-	while (isspace(ch)) { // пропускаем все пробельные символы
-		if (ch == '\n') // конец строки - вывод на экран
+	while (isspace(ch)) {
+		if (ch == '\n')
 			return newline;
 		cin.get(ch);
 	}
 	switch (ch) {
 	case '\n':
-	case '(': // для операторов
+	case '(':
 	case ')':
 	case '+':
 	case '-':
@@ -141,7 +150,7 @@ Token Token_stream::get() // получение следующего токена из потока токенов
 	case ',':
 	case '#':
 		return Token{ ch };
-	case '.': // для чисел
+	case '.':
 	case '0':
 	case '1':
 	case '2':
@@ -157,27 +166,27 @@ Token Token_stream::get() // получение следующего токена из потока токенов
 		cin >> val;
 		return Token{ number, val };
 	}
-	default: // для переменных или служебных слов 'let', 'quit', должны начинаться с буквы
+	default:
 		if (isalpha(ch)) {
 			string s;
 			s += ch;
-			while (cin.get(ch) && (isalpha(ch) || isdigit(ch) || ch == '_')) s += ch; // читаем посимвольно слово (из букв, цифр и '_')
+			while (cin.get(ch) && (isalpha(ch) || isdigit(ch) || ch == '_')) s += ch; // letter-by-letter reading a word consisting of letters, digits and '_'
 			cin.unget();
-			if (s == "let") return Token{ let }; // обработка служебных слов
+			if (s == "let") return Token{ let };
 			if (s == "quit" || s == "exit" || s == "q") return Token{ quit };
 			if (s == "help" || s == "h" || s == "H") return Token{ help };
 			if (s == "sqrt") return Token{ sqroot };
 			if (s == "pow") return Token{ power };
 			if (s == "const") return Token{ t_const };
-			return Token{ name, s }; // если не служебное слово, то переменная
+			return Token{ name, s }; // if not a reserved word
 		}
 		error("Bad token");
 	}
 }
 
-void Token_stream::ignore(char c) // игнорировать ввод до появления символа (с), переданного как аргумент
+void Token_stream::ignore(char c)
 {
-	if (full && c == buffer.kind) { // если символ c в буфере, то останавливаемся, очистив буфер
+	if (full && c == buffer.kind) { // check buffer first
 		full = false;
 		return;
 	}
@@ -185,12 +194,12 @@ void Token_stream::ignore(char c) // игнорировать ввод до появления символа (с),
 
 	char ch;
 	while (cin.get(ch)) {
-		if (ch == newline) ch = print; // для ignore() print и newline - одно и то же
-		if (ch == c) return; // останавливаемся, когда найдём символ c
+		if (ch == newline) ch = print; // print and newline are the same for ignore()
+		if (ch == c) return;
 	}
 }
 
-struct Variable { // так переменные калькулятора хранятся в памяти
+struct Variable {
 	string name;
 	double value;
 	bool is_const;
@@ -198,23 +207,23 @@ struct Variable { // так переменные калькулятора хранятся в памяти
 	Variable(string n, double v, bool c) :name(n), value(v), is_const(c) { }
 };
 
-class Symbol_table { // таблица переменных и констант
+class Symbol_table {
 	vector<Variable> var_table;
 public:
-	double get(string s); // получение значения переменной по имени
-	double set(string s, double d); // установление значения существующей переменной
-	bool is_declared(string s); // проверка существования переменной
-	double define(string var, double val, bool cnst); // добавление новой переменной в глобальную таблицу переменных
+	double get(string s);
+	double set(string s, double d);
+	bool is_declared(string s);
+	double define(string var, double val, bool cnst);
 };
 
-double Symbol_table::get(string s) // получение значения переменной по имени
+double Symbol_table::get(string s)
 {
 	for (int i = 0; i < var_table.size(); ++i)
 		if (var_table[i].name == s) return var_table[i].value;
 	error("get_value: undefined name ", s);
 }
 
-double Symbol_table::set(string s, double d) // установление значения существующей переменной
+double Symbol_table::set(string s, double d)
 {
 	for (int i = 0; i < var_table.size(); ++i)
 		if (var_table[i].name == s) {
@@ -227,14 +236,14 @@ double Symbol_table::set(string s, double d) // установление значения существующ
 	error("set: undefined name ", s);
 }
 
-bool Symbol_table::is_declared(string s) // проверка существования переменной
+bool Symbol_table::is_declared(string s)
 {
 	for (int i = 0; i < var_table.size(); ++i)
 		if (var_table[i].name == s) return true;
 	return false;
 }
 
-double Symbol_table::define(string var, double val, bool cnst) // добавление новой переменной в глобальную таблицу переменных
+double Symbol_table::define(string var, double val, bool cnst)
 {	
 	if (is_declared(var))
 		error(var, " declared twice");
@@ -242,13 +251,13 @@ double Symbol_table::define(string var, double val, bool cnst) // добавление нов
 	return val;
 }
 
-Token_stream ts; // поток токенов
+Token_stream ts;
 
-Symbol_table table; // таблица переменных
+Symbol_table table;
 
 double expression();
 
-double my_pow(double x, int i) // возведение x в степень i
+double my_pow(double x, int i)
 {
 	if (i < 0)
 		error("negative power");
@@ -260,11 +269,11 @@ double my_pow(double x, int i) // возведение x в степень i
 	return p;
 }
 
-double primary() // чтение первичного выражения -- число, отрицательное первичное выражение, выражение в скобках, существующая переменная, sqrt ( Выражение ), pow ( Выражение , Выражение ), Имя = Выражение
+double primary()
 {
 	Token t = ts.get();
 	switch (t.kind) {
-	case '(': // выражение в скобках
+	case '(':
 	{
 		double d = expression();
 		t = ts.get();
@@ -272,13 +281,13 @@ double primary() // чтение первичного выражения -- число, отрицательное первично
 			error("')' expected");
 		return d;
 	}
-	case '-': // отрицательное первичное выражение
+	case '-':
 		return -primary();
 	case '+':
 		return primary();
-	case number: // число
+	case number:
 		return t.value;
-	case name: // существующая переменная
+	case name:
 	{
 		if (!table.is_declared(t.name)) error(t.name + " is not defined");
 		Token t2 = ts.get();
@@ -291,7 +300,7 @@ double primary() // чтение первичного выражения -- число, отрицательное первично
 			return table.get(t.name);
 		}
 	}
-	case sqroot: // sqrt( Выражение )
+	case sqroot:
 		t = ts.get();
 		if (t.kind == '(') {
 			double d = expression();
@@ -305,7 +314,7 @@ double primary() // чтение первичного выражения -- число, отрицательное первично
 		}
 		else
 			error("'(' expected");
-	case power: // pow ( Выражение , Выражение )
+	case power:
 		t = ts.get();
 		if (t.kind == '(') {
 			double x = expression();
@@ -325,7 +334,7 @@ double primary() // чтение первичного выражения -- число, отрицательное первично
 	}
 }
 
-double term() // чтение терма -- первичное выражение, терм * число, терм / число
+double term()
 {
 	double left = primary();
 	while (true) {
@@ -348,14 +357,14 @@ double term() // чтение терма -- первичное выражение, терм * число, терм / число
 			left = fmod(left, d);
 			break;
 		}
-		default: // терм закончился
+		default:
 			ts.unget(t);
 			return left;
 		}
 	}
 }
 
-double expression() // чтение выражения -- терм, выражение + терм, выражение - терм
+double expression()
 {
 	double left = term();
 	while (true) {
@@ -367,14 +376,14 @@ double expression() // чтение выражения -- терм, выражение + терм, выражение - т
 		case '-':
 			left -= term();
 			break;
-		default: // выражение закончилось
+		default:
 			ts.unget(t);
 			return left;
 		}
 	}
 }
 
-double declaration(bool cnst) // объявление переменной - 'let имя = выражение', '# имя = выражение' или константы - 'const имя = выражение'
+double declaration(bool cnst)
 {
 	Token t = ts.get();
 	if (t.kind != name) {
@@ -392,44 +401,44 @@ double declaration(bool cnst) // объявление переменной - 'let имя = выражение', 
 	return d;
 }
 
-double statement() // чтение инструкции -- объявление, выражение
+double statement()
 {
 	Token t = ts.get();
 	switch (t.kind) {
-	case let: // объявление
+	case let:
 		return declaration(false);
 	case t_const:
 		return declaration(true);
-	default: // выражение
+	default:
 		ts.unget(t);
 		return expression();
 	}
 }
 
-void clean_up_mess() // очистка мусора -- игнорирование буфера до символа вывода результата включительно
+void clean_up_mess()
 {
 	ts.ignore(print);
 }
 
-const string prompt = "> "; // приглашение ко вводу
-const string result = "= "; // начало вывода результата
+const string prompt = "> ";
+const string result = "= ";
 
-void calculate() // обработка вычислений -- инструкция, вывод, выход, вычисление инструкция
+void calculate()
 {
 	while (true) try {
 		cout << prompt;
 		Token t = ts.get();
-		while (t.kind == print || t.kind == newline) { // пропускаем несколько символов вывода подряд
+		while (t.kind == print || t.kind == newline) { // ignore while ';' or '\n'
 			t = ts.get();
 		}
-		if (t.kind == quit) return; // выход из программы
+		if (t.kind == quit) return;
 		if (t.kind == help) print_help();
 		else {
-			ts.unget(t); // если не вывод на экран, не выход из программы и не вывод справки, то возвращаем токен в поток ввода и обрабатываем инструкцию, выводя результат
+			ts.unget(t);
 			cout << result << statement() << endl;
 		}
 	}
-	catch (runtime_error& e) { // в случае ошибки выводим сообщение и очищаем мусор в потоке токенов, но не завершаем программу
+	catch (runtime_error& e) {
 		cerr << e.what() << endl;
 		clean_up_mess();
 	}
@@ -443,7 +452,7 @@ try {
 	calculate();
 	return 0;
 }
-catch (exception& e) { // все остальные ошибки
+catch (exception& e) {
 	cerr << "exception: " << e.what() << endl;
 	/*char c;
 	while (cin >> c && c != ';');*/
