@@ -72,7 +72,8 @@
 */
 #define _USE_MATH_DEFINES
 
-#include "std_lib_facilities.h"
+#include "token_stream.h"
+#include "symbol_table.h"
 #include <cmath>
 
 void print_help()
@@ -91,169 +92,6 @@ void print_help()
 		<< "sqrt(x) for square root;\n"
 		<< "pow(x, n) to calculate x to the power of n (natural or zero).\n"
 		<< "--------------------------------------------------------------------------------------------------------\n";
-}
-
-struct Token {
-	char kind;
-	double value;
-	string name;
-	Token(char ch) :kind(ch), value(0) { }
-	Token(char ch, double val) :kind(ch), value(val) { }
-	Token(char ch, string n) :kind(ch), value(0), name(n) { }
-};
-
-class Token_stream {
-	bool full;
-	Token buffer;
-	istream& st;
-public:
-	Token_stream() :full(0), buffer(0), st{ cin } { }
-	Token_stream(istream& s) :full(0), buffer(0), st{ s } { }
-	Token get();
-	void unget(Token t) { buffer = t; full = true; }
-
-	void ignore(char c);
-};
-
-// Token kinds
-const char let = '#';
-const char quit = 'q';
-const char help = 'h';
-const char print = ';';
-const char newline = '\n';
-const char number = '8';
-const char name = 'a';
-const char sqroot = 'r';
-const char power = 'p';
-const char sep = ',';
-const char t_const = 'c';
-
-Token Token_stream::get()
-{
-	if (full) {
-		full = false;
-		return buffer;
-	} 
-	char ch;
-	st.get(ch);
-	while (isspace(ch)) {
-		if (ch == '\n')
-			return newline;
-		st.get(ch);
-	}
-	switch (ch) {
-	case '\n':
-	case '(':
-	case ')':
-	case '+':
-	case '-':
-	case '*':
-	case '/':
-	case '%':
-	case ';':
-	case '=':
-	case ',':
-	case '#':
-		return Token{ ch };
-	case '.':
-	case '0':
-	case '1':
-	case '2':
-	case '3':
-	case '4':
-	case '5':
-	case '6':
-	case '7':
-	case '8':
-	case '9': {
-		st.unget();
-		double val;
-		st >> val;
-		return Token{ number, val };
-	}
-	default:
-		if (isalpha(ch)) {
-			string s;
-			s += ch;
-			while (st.get(ch) && (isalpha(ch) || isdigit(ch) || ch == '_')) s += ch; // letter-by-letter reading a word consisting of letters, digits and '_'
-			st.unget();
-			if (s == "let") return Token{ let };
-			if (s == "quit" || s == "exit" || s == "q") return Token{ quit };
-			if (s == "help" || s == "h" || s == "H") return Token{ help };
-			if (s == "sqrt") return Token{ sqroot };
-			if (s == "pow") return Token{ power };
-			if (s == "const") return Token{ t_const };
-			return Token{ name, s }; // if not a reserved word
-		}
-		error("Bad token");
-	}
-}
-
-void Token_stream::ignore(char c)
-{
-	if (full && c == buffer.kind) { // check buffer first
-		full = false;
-		return;
-	}
-	full = false;
-
-	char ch;
-	while (st.get(ch)) {
-		if (ch == newline) ch = print; // print and newline are the same for ignore()
-		if (ch == c) return;
-	}
-}
-
-struct Variable {
-	string name;
-	double value;
-	bool is_const;
-	Variable(string n, double v) :name(n), value(v), is_const(false) { }
-	Variable(string n, double v, bool c) :name(n), value(v), is_const(c) { }
-};
-
-class Symbol_table {
-	vector<Variable> var_table;
-public:
-	double get(string s);
-	double set(string s, double d);
-	bool is_declared(string s);
-	double define(string var, double val, bool cnst);
-};
-
-double Symbol_table::get(string s)
-{
-	for (int i = 0; i < var_table.size(); ++i)
-		if (var_table[i].name == s) return var_table[i].value;
-	error("get_value: undefined name ", s);
-}
-
-double Symbol_table::set(string s, double d)
-{
-	for (int i = 0; i < var_table.size(); ++i)
-		if (var_table[i].name == s) {
-			if (!var_table[i].is_const) {
-				var_table[i].value = d;
-				return var_table[i].value;
-			}
-			error("set: " + s + " is const");
-		}
-	error("set: undefined name ", s);
-}
-
-bool Symbol_table::is_declared(string s)
-{
-	for (int i = 0; i < var_table.size(); ++i)
-		if (var_table[i].name == s) return true;
-	return false;
-}
-
-double Symbol_table::define(string var, double val, bool cnst)
-{	
-	if (is_declared(var))
-		error(var, " declared twice");
-	var_table.push_back(Variable(var, val, cnst));
-	return val;
 }
 
 Symbol_table table;
@@ -456,14 +294,10 @@ try {
 	return 0;
 }
 catch (exception& e) {
-	cerr << "exception: " << e.what() << '\n';
-	/*char c;
-	while (cin >> c && c != ';');*/
+	cerr << "Exception: " << e.what() << '\n';
 	return 1;
 }
 catch (...) {
-	cerr << "exception\n";
-	/*char c;
-	while (cin >> c && c != ';');*/
+	cerr << "Unknown error\n";
 	return 2;
 }

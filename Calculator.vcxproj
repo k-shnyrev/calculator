@@ -140,6 +140,13 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="calculator.cpp" />
+    <ClCompile Include="symbol_table.cpp" />
+    <ClCompile Include="token_stream.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="symbol_table.h" />
+    <ClInclude Include="token.h" />
+    <ClInclude Include="token_stream.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
