@@ -74,6 +74,7 @@
 
 #include "token_stream.h"
 #include "symbol_table.h"
+#include "roman_int.h"
 #include <cmath>
 
 void print_help()
