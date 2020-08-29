@@ -303,7 +303,7 @@ void calculate(Token_stream& ts)
 		}
 	}
 	catch (runtime_error& e) {
-		cerr << e.what() << '\n';
+		ts.get_out_stream() << e.what() << '\n';
 		clean_up_mess(ts);
 	}
 }
