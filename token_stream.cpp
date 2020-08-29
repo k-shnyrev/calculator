@@ -1,4 +1,5 @@
 #include "token_stream.h"
+#include "roman_int.h"
 
 void Token_stream::unget(Token t)
 {
@@ -44,11 +45,23 @@ Token Token_stream::get()
 	case '7':
 	case '8':
 	case '9': {
-		st.unget();
-		double val;
-		st >> val;
-		return Token{ number, val };
+        st.unget();
+        double val;
+        st >> val;
+        return Token {number, val};
 	}
+    case 'I':
+    case 'V':
+    case 'X':
+    case 'L':
+    case 'C':
+    case 'D':
+    case 'M': {
+        st.unget();
+        Roman_int val;
+        st >> val;
+        return Token {number, double(val.as_int())};
+    }
 	default:
 		if (isalpha(ch)) {
 			string s;

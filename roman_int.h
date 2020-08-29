@@ -22,3 +22,4 @@ istream& operator>>(istream& is, Roman_int& r);
 ostream& operator<<(ostream& os, const Roman_int& r);
 
 bool is_roman(const string& s);
+int char_to_val(const char c);

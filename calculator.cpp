@@ -274,8 +274,10 @@ void calculate(Token_stream& ts)
 		while (t.kind == print || t.kind == newline) { // ignore while ';' or '\n'
 			t = ts.get();
 		}
-		if (t.kind == quit) return;
-		if (t.kind == help) print_help();
+		if (t.kind == quit)
+            return;
+		if (t.kind == help)
+            print_help();
 		else {
 			ts.unget(t);
 			cout << result << statement(ts) << '\n';

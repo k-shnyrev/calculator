@@ -16,73 +16,16 @@ string Roman_int::value() const
 int Roman_int::as_int() const
 {
     int v {0};
-    int t {0};
-    for (char c : val) {
-        switch (c) {
-            case 'M':
-                if (t > 1000) {
-                    v += t;
-                    t = 1000;
-                }
-                else if (t < 1000)
-                    t = 1000 - t;
-                else
-                    t += 1000;
-                break;
-            case 'D':
-                if (t > 500) {
-                    v += t;
-                    t = 500;
-                }
-                else if (t < 500)
-                    t = 500 - t;
-                else
-                    t += 500;
-                break;
-            case 'C':
-                if (t > 100) {
-                    v += t;
-                    t = 100;
-                }
-                else if (t < 100)
-                    t = 100 - t;
-                else
-                    t += 100;
-                break;
-            case 'L':
-                if (t > 50) {
-                    v += t;
-                    t = 50;
-                }
-                else if (t < 50)
-                    t = 50 - t;
-                else
-                    t += 50;
-                break;
-            case 'X':
-                if (t > 10) {
-                    v += t;
-                    t = 10;
-                }
-                else if (t < 10)
-                    t = 10 - t;
-                else
-                    t += 10;
-                break;
-            case 'I':
-                if (t > 1) {
-                    v += t;
-                    t = 1;
-                }
-                else
-                    t += 1;
-                break;
-            default:
-                error("wrong char");
-                break;
+    int max {0};
+    for (int i = val.length() - 1; i >= 0; --i) {
+        int t = char_to_val(val[i]);
+        if (t < max)
+            v -= t;
+        else {
+            v += t;
+            max = t;
         }
     }
-    v += t;
     return v;
 }
 
@@ -123,4 +66,26 @@ bool is_roman(const string& s)
         if (c != 'M' && c == 'D' && c == 'C' && c == 'L' && c == 'X' && c == 'V' && c == 'I')
             return false;
     return true;
+}
+
+int char_to_val(const char c)
+{
+    switch (c) {
+        case 'M':
+            return 1000;
+        case 'D':
+            return 500;
+        case 'C':
+            return 100;
+        case 'L':
+            return 50;
+        case 'X':
+            return 10;
+        case 'V':
+            return 5;
+        case 'I':
+            return 1;
+        default:
+            return 0;
+    }
 }
