@@ -161,8 +161,9 @@ double primary(Token_stream &ts)
 		if (t.kind == '(') {
 			double x = expression(ts);
 			t = ts.get();
-			if (t.kind != sep)
+            if (t.kind != sep) {
 				error(sep + " expected");
+            }
 			int i = narrow_cast<int>(expression(ts));
 			t = ts.get();
 			if (t.kind != ')')
@@ -280,7 +281,11 @@ void calculate(Token_stream& ts)
             print_help();
 		else {
 			ts.unget(t);
-			cout << result << statement(ts) << '\n';
+            double res = statement(ts);
+			cout << result << res;
+            if (int(round(res)) == res)
+                cout << " (" << int_to_roman(int(round(res))) << ')';
+            cout << '\n';
 		}
 	}
 	catch (runtime_error& e) {
