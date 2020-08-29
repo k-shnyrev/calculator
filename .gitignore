@@ -2,3 +2,4 @@
 Debug/**
 *.sln
 *.vcxproj*
+.DS_Store
