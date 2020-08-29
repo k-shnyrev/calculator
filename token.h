@@ -23,3 +23,5 @@ const char sqroot = 'r';
 const char power = 'p';
 const char sep = ',';
 const char t_const = 'c';
+const char from = 'f';
+const char to = 't';

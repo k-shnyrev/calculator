@@ -14,6 +14,8 @@
 		Exit
 		Help
 		Calsulation Instruction
+        from x
+        to y
 
 	Instruction:
 		Declaration
@@ -82,6 +84,8 @@ void print_help()
 		<< "Use 'help' for help,\n"
 		<< "'quit' for quit,\n"
 		<< "';' for the end of the command to see the result.\n"
+        << "'from x' to read commands from file 'x'\n"
+        << "'to y' to write results to file 'y'"
 		<< "\n"
 		<< "Use 'let' or '#' to make a variable, names can start with letter and consist of letters, digits and '-':\n"
 		<< "example: 'let a = 3; # b_5 = a * 3;'.\n"
@@ -268,16 +272,34 @@ const string result = "= ";
 void calculate(Token_stream& ts)
 {
 	while (true) try {
-		cout << prompt;
+		ts.get_out_stream() << prompt;
 		Token t = ts.get();
 		while (t.kind == print || t.kind == newline) { // ignore while ';' or '\n'
 			t = ts.get();
 		}
 		if (t.kind == quit) return;
 		if (t.kind == help) print_help();
+        if (t.kind == from) {
+            string iname;
+            ts.get_in_stream() >> iname;
+            ifstream ifs {iname};
+            if (!ifs)
+                error("can't open input file ", iname);
+            Token_stream ts_new {ifs};
+            calculate(ts_new);
+        }
+        else if (t.kind == to) {
+            string oname;
+            ts.get_in_stream() >> oname;
+            ofstream ofs {oname};
+            if (!ofs)
+                error("can't open output file ", oname);
+            Token_stream ts_new {ts.get_in_stream(), ofs};
+            calculate(ts_new);
+        }
 		else {
 			ts.unget(t);
-			cout << result << statement(ts) << '\n';
+			ts.get_out_stream() << result << statement(ts) << '\n';
 		}
 	}
 	catch (runtime_error& e) {

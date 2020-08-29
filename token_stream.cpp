@@ -19,6 +19,8 @@ Token Token_stream::get()
 			return newline;
 		st.get(ch);
 	}
+    if (st.eof())
+        return Token{quit};
 	switch (ch) {
 	case '\n':
 	case '(':
@@ -61,6 +63,8 @@ Token Token_stream::get()
 			if (s == "sqrt") return Token{ sqroot };
 			if (s == "pow") return Token{ power };
 			if (s == "const") return Token{ t_const };
+            if (s == "from") return Token{from};
+            if (s == "to") return Token{to};
 			return Token{ name, s }; // if not a reserved word
 		}
 		error("Bad token");
@@ -81,4 +85,14 @@ void Token_stream::ignore(char c)
 		if (ch == newline) ch = print; // print and newline are the same for ignore()
 		if (ch == c) return;
 	}
+}
+
+istream& Token_stream::get_in_stream() const
+{
+    return st;
+}
+
+ostream& Token_stream::get_out_stream() const
+{
+    return os;
 }
