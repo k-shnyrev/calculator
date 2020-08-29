@@ -173,6 +173,7 @@ double primary(Token_stream &ts)
 	default:
 		error("primary expected");
 	}
+    return 0;
 }
 
 double term(Token_stream& ts)

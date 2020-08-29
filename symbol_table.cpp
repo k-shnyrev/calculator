@@ -5,6 +5,7 @@ double Symbol_table::get(string s)
 	for (int i = 0; i < var_table.size(); ++i)
 		if (var_table[i].name == s) return var_table[i].value;
 	error("get_value: undefined name ", s);
+    return 0;
 }
 
 double Symbol_table::set(string s, double d)
@@ -18,6 +19,7 @@ double Symbol_table::set(string s, double d)
 			error("set: " + s + " is const");
 		}
 	error("set: undefined name ", s);
+    return 0;
 }
 
 bool Symbol_table::is_declared(string s)
